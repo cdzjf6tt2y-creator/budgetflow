@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BudgetFlow – Personal Budget & Credit Card Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3a4f;
+      --text: #e8eef7;
+      --muted: #8b9bb4;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #eab308;
+      --orange: #f97316;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.25rem 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 1.5rem;
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    header h1 span { color: var(--accent); }
+
+    .header-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    button, .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 0.55rem 1rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover, .btn:hover { background: var(--accent-hover); }
+
+    button.secondary {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    button.secondary:hover { background: var(--border); }
+
+    button.danger { background: var(--red); }
+    button.danger:hover { background: #dc2626; }
+
+    button.small {
+      padding: 0.3rem 0.6rem;
+      font-size: 0.75rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+      background: var(--surface);
+      padding: 0.4rem;
+      border-radius: var(--radius);
+    }
+
+    .tab {
+      flex: 1;
+      min-width: 90px;
+      text-align: center;
+      padding: 0.6rem 0.75rem;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.85rem;
+      border: none;
+      cursor: pointer;
+    }
+
+    .tab.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .tab:hover:not(.active) { background: var(--surface2); color: var(--text); }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem;
+    }
+
+    .stat-card .label {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.35rem;
+    }
+
+    .stat-card .value {
+      font-size: 1.4rem;
+      font-weight: 700;
+    }
+
+    .stat-card .value.green { color: var(--green); }
+    .stat-card .value.red { color: var(--red); }
+    .stat-card .value.yellow { color: var(--yellow); }
+
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .section-header h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 0.7rem 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    .amount-pos { color: var(--green); }
+    .amount-neg { color: var(--red); }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+
+    label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 0.25rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: var(--bg);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-top: 0.4rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .progress-fill.ok { background: var(--green); }
+    .progress-fill.warn { background: var(--yellow); }
+    .progress-fill.over { background: var(--red); }
+
+    .budget-item {
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .budget-item:last-child { border-bottom: none; }
+
+    .budget-top {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 280px;
+      margin-top: 0.5rem;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      padding: 2rem 1rem;
+      font-size: 0.95rem;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      padding: 1rem;
+    }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      width: 100%;
+      max-width: 420px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal h3 {
+      margin-bottom: 1rem;
+      font-size: 1.15rem;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1.25rem;
+    }
+
+    .interest-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 0.75rem;
+      margin-top: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .interest-box strong { color: var(--orange); }
+
+    .card-actions {
+      display: flex;
+      gap: 0.35rem;
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 0 1rem;
+      color: var(--muted);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 600px) {
+      .stat-card .value { font-size: 1.2rem; }
+      table { font-size: 0.8rem; }
+      th, td { padding: 0.5rem 0.3rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Budget<span>Flow</span></h1>
+      <div class="header-actions">
+        <button class="secondary" onclick="exportData()">Export</button>
+        <button class="secondary" onclick="document.getElementById('importFile').click()">Import</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)" />
+        <button class="secondary" onclick="resetAll()">Reset</button>
+      </div>
+    </header>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="income">Income</button>
+      <button class="tab" data-tab="expenses">Expenses</button>
+      <button class="tab" data-tab="budgets">Budgets</button>
+      <button class="tab" data-tab="cards">Credit Cards</button>
+      <button class="tab" data-tab="charts">Charts</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="panel active">
+      <div class="cards" id="dashboardCards"></div>
+      <div class="section">
+        <div class="section-header">
+          <h2>Recent Transactions</h2>
+        </div>
+        <div id="recentList"></div>
+      </div>
+    </div>
+
+    <!-- INCOME -->
+    <div id="income" class="panel">
+      <div class="section">
+        <div class="section-header">
+          <h2>Income</h2>
+          <button onclick="openModal('income')">+ Add Income</button>
+        </div>
+        <div id="incomeTable"></div>
+      </div>
+    </div>
+
+    <!-- EXPENSES -->
+    <div id="expenses" class="panel">
+      <div class="section">
+        <div class="section-header">
+          <h2>Expenses</h2>
+          <button onclick="openModal('expense')">+ Add Expense</button>
+        </div>
+        <div id="expenseTable"></div>
+      </div>
+    </div>
+
+    <!-- BUDGETS -->
+    <div id="budgets" class="panel">
+      <div class="section">
+        <div class="section-header">
+          <h2>Monthly Budgets</h2>
+          <button onclick="openModal('budget')">+ Set Budget</button>
+        </div>
+        <div id="budgetList"></div>
+      </div>
+    </div>
+
+    <!-- CREDIT CARDS -->
+    <div id="cards" class="panel">
+      <div class="section">
+        <div class="section-header">
+          <h2>Credit Cards</h2>
+          <button onclick="openModal('card')">+ Add Card</button>
+        </div>
+        <div id="cardList"></div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div id="charts" class="panel">
+      <div class="section">
+        <div class="section-header"><h2>Spending by Category</h2></div>
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-header"><h2>Monthly Overview</h2></div>
+        <div class="chart-container">
+          <canvas id="monthlyChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      BudgetFlow · Data stored only in your browser · Export regularly
+    </footer>
+  </div>
+
+  <!-- MODAL -->
+  <div id="modalOverlay" class="modal-overlay" style="display:none">
+    <div class="modal">
+      <h3 id="modalTitle">Add</h3>
+      <div id="modalBody"></div>
+      <div class="modal-actions">
+        <button class="secondary" onclick="closeModal()">Cancel</button>
+        <button id="modalSaveBtn" onclick="saveModal()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== DATA ==========
+    const STORAGE_KEY = 'budgetflow_v1';
+    let data = {
+      income: [],
+      expenses: [],
+      budgets: {},
+      cards: []
+    };
+
+    const CATEGORIES = [
+      'Housing', 'Food', 'Transport', 'Utilities', 'Entertainment',
+      'Shopping', 'Health', 'Education', 'Travel', 'Subscriptions',
+      'Debt Payment', 'Other'
+    ];
+
+    let editingId = null;
+    let editingType = null;
+    let categoryChart = null;
+    let monthlyChart = null;
+
+    // ========== INIT ==========
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) data = JSON.parse(raw);
+      } catch (e) {
+        console.warn('Could not load data', e);
+      }
+      // ensure arrays exist
+      data.income = data.income || [];
+      data.expenses = data.expenses || [];
+      data.budgets = data.budgets || {};
+      data.cards = data.cards || [];
+    }
+
+    function save() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      renderAll();
+    }
+
+    function uid() {
+      return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+    }
+
+    function formatMoney(n) {
+      return new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }).format(n || 0);
+    }
+
+    function formatDate(d) {
+      if (!d) return '';
+      const dt = new Date(d);
+      return dt.toLocaleDateString('en-CA');
+    }
+
+    // ========== TABS ==========
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.tab).classList.add('active');
+        if (tab.dataset.tab === 'charts') renderCharts();
+      });
+    });
+
+    // ========== CALCULATIONS ==========
+    function getMonthKey(dateStr) {
+      const d = new Date(dateStr);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function currentMonthKey() {
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function totalIncome(month = null) {
+      return data.income
+        .filter(i => !month || getMonthKey(i.date) === month)
+        .reduce((s, i) => s + Number(i.amount), 0);
+    }
+
+    function totalExpenses(month = null) {
+      return data.expenses
+        .filter(e => !month || getMonthKey(e.date) === month)
+        .reduce((s, e) => s + Number(e.amount), 0);
+    }
+
+    function expensesByCategory(month = null) {
+      const map = {};
+      data.expenses
+        .filter(e => !month || getMonthKey(e.date) === month)
+        .forEach(e => {
+          map[e.category] = (map[e.category] || 0) + Number(e.amount);
+        });
+      return map;
+    }
+
+    function totalCardBalance() {
+      return data.cards.reduce((s, c) => s + Number(c.balance), 0);
+    }
+
+    function totalMonthlyInterest() {
+      return data.cards.reduce((s, c) => {
+        const apr = Number(c.apr) || 0;
+        const bal = Number(c.balance) || 0;
+        return s + (bal * (apr / 100) / 12);
+      }, 0);
+    }
+
+    // ========== RENDER ==========
+    function renderAll() {
+      renderDashboard();
+      renderIncome();
+      renderExpenses();
+      renderBudgets();
+      renderCards();
+    }
+
+    function renderDashboard() {
+      const month = currentMonthKey();
+      const income = totalIncome(month);
+      const expenses = totalExpenses(month);
+      const remaining = income - expenses;
+      const cardBal = totalCardBalance();
+      const interest = totalMonthlyInterest();
+
+      document.getElementById('dashboardCards').innerHTML = `
+        <div class="stat-card">
+          <div class="label">Income (this month)</div>
+          <div class="value green">${formatMoney(income)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Expenses (this month)</div>
+          <div class="value red">${formatMoney(expenses)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Remaining</div>
+          <div class="value ${remaining >= 0 ? 'green' : 'red'}">${formatMoney(remaining)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Credit Card Debt</div>
+          <div class="value ${cardBal > 0 ? 'red' : 'green'}">${formatMoney(cardBal)}</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Est. Monthly Interest</div>
+          <div class="value yellow">${formatMoney(interest)}</div>
+        </div>
+      `;
+
+      // recent transactions
+      const all = [
+        ...data.income.map(i => ({ ...i, type: 'income' })),
+        ...data.expenses.map(e => ({ ...e, type: 'expense' }))
+      ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 8);
+
+      if (all.length === 0) {
+        document.getElementById('recentList').innerHTML = '<div class="empty">No transactions yet. Add income or expenses.</div>';
+        return;
+      }
+
+      document.getElementById('recentList').innerHTML = `
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th></tr>
+          </thead>
+          <tbody>
+            ${all.map(t => `
+              <tr>
+                <td>${formatDate(t.date)}</td>
+                <td>${t.description || '—'}</td>
+                <td>${t.type === 'income' ? 'Income' : (t.category || '—')}</td>
+                <td class="${t.type === 'income' ? 'amount-pos' : 'amount-neg'}">
+                  ${t.type === 'income' ? '+' : '−'}${formatMoney(t.amount)}
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderIncome() {
+      if (data.income.length === 0) {
+        document.getElementById('incomeTable').innerHTML = '<div class="empty">No income entries yet.</div>';
+        return;
+      }
+      const sorted = [...data.income].sort((a, b) => new Date(b.date) - new Date(a.date));
+      document.getElementById('incomeTable').innerHTML = `
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Description</th><th>Amount</th><th></th></tr>
+          </thead>
+          <tbody>
+            ${sorted.map(i => `
+              <tr>
+                <td>${formatDate(i.date)}</td>
+                <td>${i.description || '—'}</td>
+                <td class="amount-pos">${formatMoney(i.amount)}</td>
+                <td class="card-actions">
+                  <button class="small secondary" onclick="editItem('income','${i.id}')">Edit</button>
+                  <button class="small danger" onclick="deleteItem('income','${i.id}')">Del</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderExpenses() {
+      if (data.expenses.length === 0) {
+        document.getElementById('expenseTable').innerHTML = '<div class="empty">No expenses yet.</div>';
+        return;
+      }
+      const sorted = [...data.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+      document.getElementById('expenseTable').innerHTML = `
+        <table>
+          <thead>
+            <tr><th>Date</th><th>Description</th><th>Category</th><th>Amount</th><th></th></tr>
+          </thead>
+          <tbody>
+            ${sorted.map(e => `
+              <tr>
+                <td>${formatDate(e.date)}</td>
+                <td>${e.description || '—'}</td>
+                <td>${e.category || '—'}</td>
+                <td class="amount-neg">${formatMoney(e.amount)}</td>
+                <td class="card-actions">
+                  <button class="small secondary" onclick="editItem('expense','${e.id}')">Edit</button>
+                  <button class="small danger" onclick="deleteItem('expense','${e.id}')">Del</button>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderBudgets() {
+      const month = currentMonthKey();
+      const byCat = expensesByCategory(month);
+      const cats = Object.keys(data.budgets);
+
+      if (cats.length === 0) {
+        document.getElementById('budgetList').innerHTML = '<div class="empty">No budgets set. Click “+ Set Budget”.</div>';
+        return;
+      }
+
+      document.getElementById('budgetList').innerHTML = cats.map(cat => {
+        const limit = Number(data.budgets[cat]) || 0;
+        const spent = byCat[cat] || 0;
+        const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
+        let cls = 'ok';
+        if (pct >= 90) cls = 'over';
+        else if (pct >= 70) cls = 'warn';
+
+        return `
+          <div class="budget-item">
+            <div class="budget-top">
+              <span><strong>${cat}</strong></span>
+              <span>${formatMoney(spent)} / ${formatMoney(limit)}</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill ${cls}" style="width:${pct}%"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:0.35rem;font-size:0.8rem;color:var(--muted)">
+              <span>${pct.toFixed(0)}% used</span>
+              <span>
+                <button class="small secondary" onclick="editBudget('${cat}')">Edit</button>
+                <button class="small danger" onclick="deleteBudget('${cat}')">Del</button>
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCards() {
+      if (data.cards.length === 0) {
+        document.getElementById('cardList').innerHTML = '<div class="empty">No credit cards added yet.</div>';
+        return;
+      }
+
+      document.getElementById('cardList').innerHTML = data.cards.map(c => {
+        const bal = Number(c.balance) || 0;
+        const apr = Number(c.apr) || 0;
+        const monthlyInterest = bal * (apr / 100) / 12;
+        const dailyInterest = monthlyInterest / 30;
+        const yearlyInterest = bal * (apr / 100);
+
+        return `
+          <div class="section" style="margin-bottom:1rem;padding:1rem">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:0.5rem">
+              <div>
+                <strong style="font-size:1.05rem">${c.name}</strong>
+                <div style="color:var(--muted);font-size:0.85rem;margin-top:0.15rem">
+                  ${c.last4 ? '•••• ' + c.last4 : ''} · APR ${apr}%
+                </div>
+              </div>
+              <div class="card-actions">
+                <button class="small secondary" onclick="editItem('card','${c.id}')">Edit</button>
+                <button class="small danger" onclick="deleteItem('card','${c.id}')">Del</button>
+              </div>
+            </div>
+            <div style="margin-top:0.75rem;font-size:1.3rem;font-weight:700;color:var(--red)">
+              ${formatMoney(bal)}
+            </div>
+            <div class="interest-box">
+              <div>Estimated interest if balance stays the same:</div>
+              <div style="margin-top:0.35rem">
+                <strong>${formatMoney(dailyInterest)}</strong> / day ·
+                <strong>${formatMoney(monthlyInterest)}</strong> / month ·
+                <strong>${formatMoney(yearlyInterest)}</strong> / year
+              </div>
+              <div style="margin-top:0.4rem;color:var(--muted);font-size:0.8rem">
+                Formula: Balance × (APR ÷ 100) ÷ 12 for monthly interest.
+                Pay more than the minimum to reduce this fast.
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderCharts() {
+      const month = currentMonthKey();
+      const byCat = expensesByCategory(month);
+      const labels = Object.keys(byCat);
+      const values = Object.values(byCat);
+
+      // destroy old charts
+      if (categoryChart) categoryChart.destroy();
+      if (monthlyChart) monthlyChart.destroy();
+
+      const catCtx = document.getElementById('categoryChart').getContext('2d');
+      categoryChart = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+          labels: labels.length ? labels : ['No data'],
+          datasets: [{
+            data: values.length ? values : [1],
+            backgroundColor: [
+              '#3b82f6','#22c55e','#eab308','#ef4444','#a855f7',
+              '#f97316','#06b6d4','#ec4899','#84cc16','#6366f1'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'right', labels: { color: '#8b9bb4', boxWidth: 12 } }
+          }
+        }
+      });
+
+      // monthly overview – last 6 months
+      const months = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+      }
+
+      const incomeData = months.map(m => totalIncome(m));
+      const expenseData = months.map(m => totalExpenses(m));
+
+      const monCtx = document.getElementById('monthlyChart').getContext('2d');
+      monthlyChart = new Chart(monCtx, {
+        type: 'bar',
+        data: {
+          labels: months.map(m => {
+            const [y, mo] = m.split('-');
+            return new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
+          }),
+          datasets: [
+            {
+              label: 'Income',
+              data: incomeData,
+              backgroundColor: '#22c55e88',
+              borderColor: '#22c55e',
+              borderWidth: 1
+            },
+            {
+              label: 'Expenses',
+              data: expenseData,
+              backgroundColor: '#ef444488',
+              borderColor: '#ef4444',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { color: '#8b9bb4' }, grid: { color: '#2d3a4f' } },
+            y: { ticks: { color: '#8b9bb4' }, grid: { color: '#2d3a4f' } }
+          },
+          plugins: {
+            legend: { labels: { color: '#8b9bb4' } }
+          }
+        }
+      });
+    }
+
+    // ========== MODAL ==========
+    function openModal(type, id = null) {
+      editingType = type;
+      editingId = id;
+      const overlay = document.getElementById('modalOverlay');
+      const title = document.getElementById('modalTitle');
+      const body = document.getElementById('modalBody');
+
+      const today = new Date().toISOString().slice(0, 10);
+
+      if (type === 'income') {
+        const item = id ? data.income.find(i => i.id === id) : null;
+        title.textContent = item ? 'Edit Income' : 'Add Income';
+        body.innerHTML = `
+          <div class="form-grid">
+            <div>
+              <label>Date</label>
+              <input type="date" id="f-date" value="${item ? item.date : today}" />
+            </div>
+            <div>
+              <label>Amount (CAD)</label>
+              <input type="number" id="f-amount" step="0.01" min="0" value="${item ? item.amount : ''}" placeholder="0.00" />
+            </div>
+          </div>
+          <div>
+            <label>Description</label>
+            <input type="text" id="f-desc" value="${item ? (item.description || '') : ''}" placeholder="e.g. Paycheque" />
+          </div>
+        `;
+      }
+
+      if (type === 'expense') {
+        const item = id ? data.expenses.find(e => e.id === id) : null;
+        title.textContent = item ? 'Edit Expense' : 'Add Expense';
+        body.innerHTML = `
+          <div class="form-grid">
+            <div>
+              <label>Date</label>
+              <input type="date" id="f-date" value="${item ? item.date : today}" />
+            </div>
+            <div>
+              <label>Amount (CAD)</label>
+              <input type="number" id="f-amount" step="0.01" min="0" value="${item ? item.amount : ''}" placeholder="0.00" />
+            </div>
+            <div>
+              <label>Category</label>
+              <select id="f-category">
+                ${CATEGORIES.map(c => `<option value="${c}" ${item && item.category === c ? 'selected' : ''}>${c}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label>Description</label>
+            <input type="text" id="f-desc" value="${item ? (item.description || '') : ''}" placeholder="e.g. Groceries" />
+          </div>
+        `;
+      }
+
+      if (type === 'budget') {
+        title.textContent = 'Set Budget';
+        body.innerHTML = `
+          <div class="form-grid">
+            <div>
+              <label>Category</label>
+              <select id="f-category">
+                ${CATEGORIES.map(c => `<option value="${c}">${c}</option>`).join('')}
+              </select>
+            </div>
+            <div>
+              <label>Monthly Limit (CAD)</label>
+              <input type="number" id="f-amount" step="0.01" min="0" placeholder="500" />
+            </div>
+          </div>
+        `;
+      }
+
+      if (type === 'card') {
+        const item = id ? data.cards.find(c => c.id === id) : null;
+        title.textContent = item ? 'Edit Credit Card' : 'Add Credit Card';
+        body.innerHTML = `
+          <div class="form-grid">
+            <div>
+              <label>Card Name</label>
+              <input type="text" id="f-name" value="${item ? item.name : ''}" placeholder="e.g. TD Cash Back" />
+            </div>
+            <div>
+              <label>Last 4 digits (optional)</label>
+              <input type="text" id="f-last4" maxlength="4" value="${item ? (item.last4 || '') : ''}" placeholder="1234" />
+            </div>
+            <div>
+              <label>Current Balance (CAD)</label>
+              <input type="number" id="f-balance" step="0.01" min="0" value="${item ? item.balance : ''}" placeholder="0.00" />
+            </div>
+            <div>
+              <label>APR / Interest Rate (%)</label>
+              <input type="number" id="f-apr" step="0.01" min="0" value="${item ? item.apr : ''}" placeholder="19.99" />
+            </div>
+          </div>
+          <p style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem">
+            Interest is estimated as Balance × (APR ÷ 100) ÷ 12. Update the balance after every payment or purchase for accurate tracking.
+          </p>
+        `;
+      }
+
+      overlay.style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('modalOverlay').style.display = 'none';
+      editingId = null;
+      editingType = null;
+    }
+
+    function saveModal() {
+      if (editingType === 'income') {
+        const date = document.getElementById('f-date').value;
+        const amount = parseFloat(document.getElementById('f-amount').value);
+        const description = document.getElementById('f-desc').value.trim();
+        if (!date || isNaN(amount) || amount < 0) return alert('Please enter a valid date and amount.');
+
+        if (editingId) {
+          const item = data.income.find(i => i.id === editingId);
+          if (item) {
+            item.date = date;
+            item.amount = amount;
+            item.description = description;
+          }
+        } else {
+          data.income.push({ id: uid(), date, amount, description });
+        }
+      }
+
+      if (editingType === 'expense') {
+        const date = document.getElementById('f-date').value;
+        const amount = parseFloat(document.getElementById('f-amount').value);
+        const category = document.getElementById('f-category').value;
+        const description = document.getElementById('f-desc').value.trim();
+        if (!date || isNaN(amount) || amount < 0) return alert('Please enter a valid date and amount.');
+
+        if (editingId) {
+          const item = data.expenses.find(e => e.id === editingId);
+          if (item) {
+            item.date = date;
+            item.amount = amount;
+            item.category = category;
+            item.description = description;
+          }
+        } else {
+          data.expenses.push({ id: uid(), date, amount, category, description });
+        }
+      }
+
+      if (editingType === 'budget') {
+        const category = document.getElementById('f-category').value;
+        const amount = parseFloat(document.getElementById('f-amount').value);
+        if (isNaN(amount) || amount < 0) return alert('Enter a valid budget amount.');
+        data.budgets[category] = amount;
+      }
+
+      if (editingType === 'card') {
+        const name = document.getElementById('f-name').value.trim();
+        const last4 = document.getElementById('f-last4').value.trim();
+        const balance = parseFloat(document.getElementById('f-balance').value);
+        const apr = parseFloat(document.getElementById('f-apr').value);
+        if (!name || isNaN(balance) || balance < 0 || isNaN(apr) || apr < 0) {
+          return alert('Please fill card name, balance and APR correctly.');
+        }
+
+        if (editingId) {
+          const item = data.cards.find(c => c.id === editingId);
+          if (item) {
+            item.name = name;
+            item.last4 = last4;
+            item.balance = balance;
+            item.apr = apr;
+          }
+        } else {
+          data.cards.push({ id: uid(), name, last4, balance, apr });
+        }
+      }
+
+      save();
+      closeModal();
+    }
+
+    function editItem(type, id) {
+      openModal(type, id);
+    }
+
+    function deleteItem(type, id) {
+      if (!confirm('Delete this entry?')) return;
+      if (type === 'income') data.income = data.income.filter(i => i.id !== id);
+      if (type === 'expense') data.expenses = data.expenses.filter(e => e.id !== id);
+      if (type === 'card') data.cards = data.cards.filter(c => c.id !== id);
+      save();
+    }
+
+    function editBudget(cat) {
+      openModal('budget');
+      setTimeout(() => {
+        document.getElementById('f-category').value = cat;
+        document.getElementById('f-amount').value = data.budgets[cat];
+      }, 50);
+    }
+
+    function deleteBudget(cat) {
+      if (!confirm(`Remove budget for ${cat}?`)) return;
+      delete data.budgets[cat];
+      save();
+    }
+
+    // ========== IMPORT / EXPORT / RESET ==========
+    function exportData() {
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `budgetflow-backup-${new Date().toISOString().slice(0,10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importData(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const imported = JSON.parse(ev.target.result);
+          if (!imported.income || !imported.expenses) throw new Error('Invalid file');
+          if (!confirm('This will replace all current data. Continue?')) return;
+          data = imported;
+          save();
+          alert('Import successful!');
+        } catch (err) {
+          alert('Could not import file. Make sure it is a valid BudgetFlow JSON export.');
+        }
+      };
+      reader.readAsText(file);
+      e.target.value = '';
+    }
+
+    function resetAll() {
+      if (!confirm('Delete ALL data? This cannot be undone.')) return;
+      if (!confirm('Are you absolutely sure?')) return;
+      data = { income: [], expenses: [], budgets: {}, cards: [] };
+      save();
+    }
+
+    // ========== START ==========
+    load();
+    renderAll();
+  </script>
+</body>
+</html>
